@@ -15,3 +15,13 @@
 
 (defn part-1 []
   (count (filter-reports safe?)))
+
+(defn safe-enough? [values]
+  (some true?
+   (for [i (range (count values))
+         :let [[before after] (split-at i values)
+               values* (concat before (drop 1 after))]]
+     (safe? values*))))
+
+(defn part-2 []
+  (count (filter-reports #(or (safe? %) (safe-enough? %)))))
