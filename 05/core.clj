@@ -1,5 +1,6 @@
 (ns core
   (:require
+   [clojure.set :as set]
    [clojure.string :as str]))
 
 (defn rules-idx [rules]
@@ -39,4 +40,15 @@
 (defn part-1 []
   (let [{:keys [rules updates]} (read-rules-and-updates (slurp "05/input.txt"))]
     (->> (filter #(update-right-order? rules %) updates)
+         (sum-middle-pages))))
+
+(defn re-order-pages [rules pages]
+  (->> (map (juxt identity #(set/intersection (get-in rules [% :after]) (set pages))) pages)
+       (sort-by (comp count second))
+       (map first)))
+
+(defn part-2 []
+  (let [{:keys [rules updates]} (read-rules-and-updates (slurp "05/input.txt"))]
+    (->> (remove #(update-right-order? rules %) updates)
+         (map #(re-order-pages rules %))
          (sum-middle-pages))))
