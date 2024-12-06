@@ -35,7 +35,9 @@
 (defn predict-path [{:keys [floor guard]}]
   (loop [guard-path [guard]]
     (if-let [next-guard-location (predict-next-guard-location floor (peek guard-path))]
-      (recur (conj guard-path next-guard-location))
+      (if (contains? (set guard-path) next-guard-location)
+        ::loop
+        (recur (conj guard-path next-guard-location)))
       guard-path)))
 
 (defn part-1 []
@@ -43,3 +45,11 @@
        (predict-path)
        (into #{} (map :loc))
        (count)))
+
+(defn part-2 []
+  ;; This is slow, there is probably a smarter solution :'(
+  (let [situation (read-the-situation (slurp "06/input.txt"))]
+    (->> (into #{} (map :loc) (rest (predict-path situation)))
+         (pmap #(= ::loop (predict-path (update situation :floor assoc % \#))))
+         (filter true?)
+         (count))))
