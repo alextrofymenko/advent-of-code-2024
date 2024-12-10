@@ -34,3 +34,41 @@
     (->> (take-while (complement empty-space?) blocks)
          (map-indexed vector)
          (reduce #(+ %1 (* (first %2) (second %2))) 0))))
+
+(defn lookahead [blocks cursor]
+  (let [ref-block (aget blocks cursor)]
+    (loop [c cursor]
+      (if (and (= ref-block (aget blocks c)) (< c (dec (count blocks))))
+        (recur (inc c))
+        [ref-block (- c cursor)]))))
+
+(defn lookbehind [blocks cursor]
+  (let [ref-block (aget blocks cursor)]
+    (loop [c cursor]
+      (if (and (= ref-block (aget blocks c)) (> c 0))
+        (recur (dec c))
+        (- cursor c)))))
+
+(defn free-space [blocks right-cursor required-size]
+  (loop [left-cursor 0]
+    (when (< left-cursor right-cursor (count blocks))
+      (when-let [[ref-block size] (lookahead blocks left-cursor)]
+        (if (and (empty-space? ref-block) (>= size required-size))
+          left-cursor
+          (recur (+ left-cursor size)))))))
+
+(defn sort-chunks! [blocks]
+  (loop [right-cursor (dec (count blocks))]
+    (when (> right-cursor 0)
+      (if (empty-space? (aget blocks right-cursor))
+        (recur (dec right-cursor))
+        (let [size (lookbehind blocks right-cursor)]
+          (when-let [left-cursor (free-space blocks right-cursor size)]
+            (dotimes [n size] (swap-blocks! blocks (+ left-cursor n) (- right-cursor n))))
+          (recur (- right-cursor size)))))))
+
+(defn part-2 []
+  (let [blocks (read-blocks (slurp "09/input.txt"))]
+    (sort-chunks! blocks)
+    (->> (map-indexed vector blocks)
+         (reduce (fn [res [i v]] (+ res (* i (if (neg? v) 0 v)))) 0))))
