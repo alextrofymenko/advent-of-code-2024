@@ -38,3 +38,10 @@
      (fn [score trailhead _current-level]
        (+ score (count (into #{} (map last) (check-trails grid-map trailhead)))))
      0 grid-map)))
+
+(defn part-2 []
+  (let [grid-map (read-grid-map (slurp "10/input.txt"))]
+    (reduce-kv
+     (fn [score trailhead _current-level]
+       (+ score (count (check-trails grid-map trailhead))))
+     0 grid-map)))
