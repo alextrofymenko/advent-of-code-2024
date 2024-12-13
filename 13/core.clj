@@ -22,3 +22,12 @@
   (->> (examine-machines (slurp "13/input.txt"))
        (keep (comp cramer's-rule read-buttons-and-prizes))
        (reduce #(+ %1 (* 3 (first %2)) (last %2)) 0)))
+
+(defn fix-prize-positions [coefficients]
+  (concat (take 4 coefficients)
+          (map #(+ 10000000000000 %) (take-last 2 coefficients))))
+
+(defn part-2 []
+  (->> (examine-machines (slurp "13/input.txt"))
+       (keep (comp cramer's-rule fix-prize-positions read-buttons-and-prizes))
+       (reduce #(+ %1 (* 3 (first %2)) (last %2)) 0)))
