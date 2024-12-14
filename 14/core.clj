@@ -50,3 +50,34 @@
   (-> (init-map "14/input.txt")
       (robots-by-quadrant 100)
       (safety-factor)))
+
+(defn draw-map [by-quadrant]
+  (let [by-coords (reduce #(assoc %1 [(:px %2) (:py %2)] \X) {} (mapcat val by-quadrant))]
+    (doseq [y (range 103)]
+      (prn (apply str (map #(get by-coords [% y] \.) (range 101)))))))
+
+(defn part-2
+  "I had no idea what this meant, whether it was referring to a previous exercise or what.
+   I saw that https://adventofcode.com/2015/ had a XMAS tree for example, but couldn't see
+   how I could guess where in the image it would be. So I went to check Reddit and found this:
+
+   > Like many other people have pointed out, the states cycle every 101*103=10403
+     iterations which unfortunately is still a lot of states to manually check.
+   > To speed things up, I used the heuristic that if the robots formed a random image,
+     they'd be spread out evenly, so the safety factor would be high. Conversely if the
+     robots formed a structured image we'd expect clustering in certain quadrants which
+     would lower the overall safety score.
+
+   > So I sorted the states by safety score and the 11th lowest safety score had a Christmas tree 🎄
+
+   For me this was the lowest safety score - [6475 97078128]. I just printed the map and there it was!
+   This is both brilliant and frustrating, I don't think I would have ever gotten there on my own..."
+  []
+  (let [map-and-robots (init-map "14/input.txt")]
+    (->> (range 1 (inc (* 101 103)))
+         (map #(vector % (safety-factor (robots-by-quadrant map-and-robots %))))
+         (sort-by second)
+         (take 50))))
+
+(comment
+  (draw-map (robots-by-quadrant (init-map "14/input.txt") 6475)))
