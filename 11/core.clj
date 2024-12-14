@@ -20,3 +20,17 @@
 
 (defn part-1 []
   (count (blink 25 (read-stones "70949 6183 4 3825336 613971 0 15 182"))))
+
+(def blink-sum
+  "Took me 4 days to think of doing it this way (completed on day 14) - keeping the sum
+   in memory rather than the entire seq. It's both faster (almost instant thanks to memoize),
+   and takes less memory (~80MB even with memoize). The original solution would have taken
+   weeks, assuming it didn't run out of memory"
+  (memoize
+   (fn [n stone]
+     (if (> n 0)
+       (apply + (map #(blink-sum (dec n) %) (transform-stone stone)))
+       1))))
+
+(defn part-2 []
+  (apply + (map #(blink-sum 75 %) (read-stones "70949 6183 4 3825336 613971 0 15 182"))))
