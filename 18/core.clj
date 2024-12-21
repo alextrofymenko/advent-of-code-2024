@@ -33,3 +33,20 @@
       (predict-corrupted-locations 71 1024)
       (dijkstra [0 0] [70 70])
       (:cost)))
+
+;; Divide and conquer (thanks, Tijmen)
+(defn blocking-byte [bytes]
+  (loop [low 1024 high (count bytes)]
+    (let [corrupted (+ low (int (/ (- high low) 2)))
+          path? (-> (predict-corrupted-locations bytes 71 corrupted)
+                    (dijkstra [0 0] [70 70])
+                    (some?))]
+      (if (<= (- high low) 1)
+        (cond-> corrupted path? inc)
+        (recur
+         (if path? corrupted low)
+         (if path? high corrupted))))))
+
+(defn part-2 []
+  (let [bytes (scan-memory (slurp "18/input.txt"))]
+    (nth bytes (dec (blocking-byte bytes)))))
