@@ -62,7 +62,16 @@
        (count stone)))))
 
 (defn part-1 []
-  (apply + (map complexity (str/split-lines (slurp "21/input.txt")))))
+  (reduce
+   (fn [total code]
+     (+ total (* (parse-long (re-find #"\d+" code)) (num-presses 2 (nums->arrows code)))))
+   0 (str/split-lines (slurp "21/input.txt"))))
+
+(defn part-2 []
+  (reduce
+   (fn [total code]
+     (+ total (* (parse-long (re-find #"\d+" code)) (num-presses 25 (nums->arrows code)))))
+   0 (str/split-lines (slurp "21/input.txt"))))
 
 ;; Debugging :')
 
@@ -83,7 +92,3 @@
 
 (defn decode-nums [s]
   (apply str (reduce #(conj %1 (coord->num (decode-arrow %2 (numpad (or (peek %1) \A))))) [] (str/split s #"A"))))
-
-(comment
-  (-> (code->my-input "379A") decode-arrows decode-arrows decode-nums)
-  )
