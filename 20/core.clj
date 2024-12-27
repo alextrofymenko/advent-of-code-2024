@@ -65,3 +65,43 @@
         [original & cheats] (cheating-dijkstra racetrack start end 1)]
     (->> (map #(- (:cost original) (:cost %)) cheats)
          (reduce #(cond-> %1 (>= %2 100) inc) 0))))
+
+(defn walk-the-path
+  "Taking advantage of the fact that it's a straight path"
+  [grid-map start]
+  (loop [frontier start cost 0 path {start cost}]
+    (if-let [next-step (first
+                        (for [dir [[1 0] [-1 0] [0 1] [0 -1]]
+                              :let [step (map + frontier dir)]
+                              :when (and (contains? #{\. \E} (get grid-map step))
+                                         (not (contains? path step)))]
+                          step))]
+      (recur next-step (inc cost) (assoc path next-step (inc cost)))
+      path)))
+
+(defn distance [[x1 y1] [x2 y2]]
+  (+ (abs (- x2 x1)) (abs (- y2 y1))))
+
+(defn part-2
+  "This is much closer to my first approach, except I totally misunderstood distances at first.
+   It's much simpler than the approach above, and faster too. With max-d = 2 and min-saved = 100,
+   this completes in ~30s vs ~300s of part-1"
+  []
+  (let [{:keys [racetrack start]} (grab-a-map (slurp "20/input.txt"))
+        path (walk-the-path racetrack start)
+        max-d 20
+        min-saved 100]
+    (loop [path* path shortcuts 0]
+      (if-let [[p1 c1] (first path*)]
+        (recur
+         (dissoc path* p1)
+         (reduce (fn [shortcuts [p2 c2]]
+                   (if (> c2 c1)
+                     (let [d (distance p1 p2)
+                           saved (- c2 c1 d)]
+                       (if (and (<= d max-d) (>= saved min-saved))
+                         (inc shortcuts)
+                         shortcuts))
+                     shortcuts))
+                 shortcuts path))
+        shortcuts))))
