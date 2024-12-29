@@ -41,3 +41,36 @@
 
 (defn part-1 []
   (-> (slurp "24/input.txt") read-system run-system read-output ->number))
+
+(defn part-2
+  "I think this was probably the hardest puzzle yet. I have no idea why this works,
+   I just followed the steps from the main post + comment from Reddit:
+   https://www.reddit.com/r/adventofcode/comments/1hla5ql/comment/m3kws15/
+
+   1. If the output of a gate is z, then the operation has to be XOR unless it is the last bit.
+   2. If the output of a gate is not z and the inputs are not x, y then it has to be AND / OR, but not XOR.
+   3. If you have a XOR gate with inputs x, y, there must be another XOR gate with this gate as an input.
+      Search through all gates for an XOR-gate with this gate as an input; if it does not exist, your (original) XOR gate is faulty.
+   4. Similarly, if you have an AND-gate, there must be an OR-gate with this gate as an input.
+      If that gate doesn't exist, the original AND gate is faulty.
+
+   (3 & 4 don't apply for x00 and y00)"
+  []
+  (let [[_ logic] (str/split (slurp "24/input.txt") #"\n\n")
+        logic (str/split-lines logic)
+        step-1 (filter #(re-find #"... [^X].*? ... -> z[^(45)]" %) logic)
+        step-2 (filter #(re-find #"[^xy].. XOR [^xy].. -> [^z]" %) logic)
+        step-3 (for [line logic
+                     :when (re-find #"[xy](?!00).*? XOR [xy](?!00).*? " line)
+                     :let [output (re-find #"(?<= -> ).*" line)]
+                     :when (empty? (filter #(re-find (re-pattern (str output " XOR | XOR " output)) %) logic))]
+                 line)
+        step-4 (for [line logic
+                     :when (and (re-find #" AND " line) (not (re-find #"x00|y00" line)))
+                     :let [output (re-find #"(?<= -> ).*" line)]
+                     :when (empty? (filter #(re-find (re-pattern (str output " OR | OR " output)) %) logic))]
+                 line)]
+    (->> (into #{} (concat step-1 step-2 step-3 step-4))
+         (map #(re-find #"(?<= -> ).*" %))
+         (sort)
+         (str/join ","))))
