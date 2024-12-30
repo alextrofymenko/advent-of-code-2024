@@ -161,3 +161,94 @@
       #_(update  :robot-movements #(take 2 %))
       process-steps
       print-map))
+
+
+
+;; Game! (ish)
+;;
+;; At the time I only printed the map step by step, but I had planted the idea of making the
+;; debugging process interactive, so after the event I decided to actually sit down and do it.
+;;
+;; Pretty hacky, but doesn't disrupt the normal bb REPL wokrflow with extra deps
+;; clj -Sdeps '{:deps {clojure-lanterna/clojure-lanterna {:mvn/version "0.9.7"}}}' -M 15/core.clj game!
+
+(def arrow->coord
+  {:up    [0 -1]
+   :down  [0 1]
+   :left  [-1 0]
+   :right [1 0]})
+
+(def fg-colours
+  {\@ :black
+   \# :red
+   \. :white
+   \O :green
+   \[ :green
+   \] :green})
+
+(def bg-colours
+  {\@ :white})
+
+(defn move-robot [warehouse-map key-pressed]
+  (if (contains? #{:up :down :left :right} key-pressed)
+    (process-step warehouse-map (arrow->coord key-pressed))
+    warehouse-map))
+
+(when (= *command-line-args* ["game!"])
+  (let [term          ((requiring-resolve 'lanterna.terminal/get-terminal) :text)
+
+        file          (atom "15/input.txt")
+        double-wide?  (atom true)
+        auto-mode?    (atom false)
+        instructions  ["Welcome to the Warehouse Simulator 2024!"
+                       ""
+                       "You can use arrows to move! Also:"
+                       " - R - resets to initial state"
+                       " - A - auto mode!"
+                       " - D - toggles double-wide mode"
+                       " - [1-3] - use samples 1, 2 or 3"
+                       " - I - use main input"
+                       " - Q - quit!"]
+        init-state    #(do
+                         ((requiring-resolve 'lanterna.terminal/clear) term)
+                         ((requiring-resolve 'lanterna.terminal/set-fg-color) term :default)
+                         ((requiring-resolve 'lanterna.terminal/put-string) term (str/join "\n" instructions))
+                         (init (slurp @file) {:double-wide? @double-wide?}))
+        draw-map      (fn [term previous-state current-state]
+                        (let [intro-offset (inc (count instructions))
+                              tiles-to-draw (second
+                                             ((requiring-resolve 'clojure.data/diff) (:warehouse-map previous-state)
+                                                                                     (:warehouse-map current-state)))]
+                          (doseq [[[x y] c] (sort-by (comp (juxt first second) key) tiles-to-draw)]
+                            ((requiring-resolve 'lanterna.terminal/set-fg-color) term (get fg-colours c))
+                            ((requiring-resolve 'lanterna.terminal/set-bg-color) term (get bg-colours c :default))
+                            ((requiring-resolve 'lanterna.terminal/put-character) term c x (+ y intro-offset)))))]
+
+    ((requiring-resolve 'lanterna.terminal/start) term)
+    (.setCursorVisible term false)
+
+    (loop [previous-state nil
+           current-state (init-state)]
+      (draw-map term previous-state current-state)
+      (if (and @auto-mode? (first (:robot-movements current-state)))
+        (let [interrupt? ((requiring-resolve 'lanterna.terminal/get-key-blocking) term {:timeout 10})]
+          (when interrupt?
+            (reset! auto-mode? false))
+          (recur current-state
+                 (-> current-state
+                     (update :warehouse-map process-step (first (:robot-movements current-state)))
+                     (update :robot-movements rest))))
+        (let [k ((requiring-resolve 'lanterna.terminal/get-key-blocking) term)]
+          (reset! auto-mode? false)
+          (case k
+            \q ::quit
+            \r (recur nil (init-state))
+            \a (do (reset! auto-mode? true) (recur nil (init-state)))
+            \d (do (swap! double-wide? not) (recur nil (init-state)))
+            \1 (do (reset! file "15/sample-1.txt") (recur nil (init-state)))
+            \2 (do (reset! file "15/sample-2.txt") (recur nil (init-state)))
+            \3 (do (reset! file "15/sample-3.txt") (recur nil (init-state)))
+            \i (do (reset! file "15/input.txt") (recur nil (init-state)))
+            (recur current-state (update current-state :warehouse-map move-robot k))))))
+
+    ((requiring-resolve 'lanterna.terminal/stop) term)))
